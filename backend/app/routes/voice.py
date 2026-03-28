@@ -20,6 +20,10 @@ _ALLOWED_CONTENT_TYPES = {
     "audio/ogg",
     "audio/mp4",
     "audio/mpeg",
+    "audio/m4a",
+    "audio/x-m4a",
+    "audio/aac",
+    "audio/3gpp",
     "video/webm",  # some browsers tag MediaRecorder output this way
     "application/octet-stream",
 }
@@ -134,8 +138,9 @@ async def process_voice(
       5. Synthesise response text to speech with GhanaNLP TTS.
       6. Return transcribed text, response text, and base64 audio.
     """
+    print(f"[DEBUG] audio.content_type={audio.content_type!r}  audio.filename={audio.filename!r}", flush=True)
     normalised = _normalise_upload_content_type(audio.content_type)
-    if normalised not in _ALLOWED_CONTENT_TYPES:
+    if normalised is not None and normalised not in _ALLOWED_CONTENT_TYPES:
         raise HTTPException(
             status_code=415,
             detail=(
@@ -145,12 +150,15 @@ async def process_voice(
         )
 
     raw_ct = (audio.content_type or "").lower()
+    filename = (audio.filename or "").lower()
     if "wav" in raw_ct:
         suffix = ".wav"
-    elif "mp4" in raw_ct or "mpeg" in raw_ct:
-        suffix = ".mp4"
+    elif "mp4" in raw_ct or "mpeg" in raw_ct or "m4a" in raw_ct or "m4a" in filename:
+        suffix = ".m4a"
+    elif "aac" in raw_ct or "3gpp" in raw_ct:
+        suffix = ".m4a"
     else:
-        suffix = ".webm"
+        suffix = ".m4a"  # React Native default is m4a
     tmp_path: str | None = None
 
     try:
