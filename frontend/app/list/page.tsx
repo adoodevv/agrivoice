@@ -9,17 +9,20 @@ import { useLanguage } from "../context/LanguageContext";
 type Tab    = "voice" | "form";
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
-const CROPS   = ["Maize", "Yam", "Tomatoes", "Cassava", "Plantain", "Cocoa", "Rice"] as const;
+const CROPS   = ["Cocoa", "Shea Butter", "Cashew", "Palm Oil", "Maize", "Yam", "Cassava", "Groundnut", "Plantain", "Rice"] as const;
 const REGIONS = ["Accra", "Kumasi", "Tamale", "Takoradi", "Cape Coast", "Koforidua"] as const;
 
 const UNITS_BY_CROP: Record<string, string[]> = {
-  Maize:    ["bags", "kg", "tonnes"],
-  Yam:      ["tubers", "bags", "tonnes"],
-  Tomatoes: ["crates", "kg", "boxes"],
-  Cassava:  ["bags", "kg", "tonnes"],
-  Plantain: ["bunches", "boxes", "kg"],
-  Cocoa:    ["bags", "kg", "tonnes"],
-  Rice:     ["bags", "kg", "tonnes"],
+  "Cocoa":       ["bags (64 kg)", "kg", "tonnes"],
+  "Shea Butter": ["bowls (10 kg)", "kg", "tonnes"],
+  "Cashew":      ["bags (80 kg)", "kg", "tonnes"],
+  "Palm Oil":    ["gallons", "litres", "drums"],
+  "Maize":       ["bags (100 kg)", "kg", "tonnes"],
+  "Yam":         ["tubers", "bags", "tonnes"],
+  "Cassava":     ["bags", "kg", "tonnes"],
+  "Groundnut":   ["bags (80 kg)", "kg", "tonnes"],
+  "Plantain":    ["bunches", "boxes", "kg"],
+  "Rice":        ["bags (50 kg)", "kg", "tonnes"],
 };
 
 export default function ListPage() {

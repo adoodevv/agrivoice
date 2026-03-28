@@ -19,34 +19,59 @@ from app.services.gemini_service import GeminiService
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Market price data
+# Market price data  (Ghana export commodities + key staples, GHS)
 # ---------------------------------------------------------------------------
 
 MARKET_PRICES: dict[str, dict[str, dict]] = {
+    "cocoa": {
+        "accra":  {"price": 1750, "unit": "bag (64 kg)"},
+        "kumasi": {"price": 1720, "unit": "bag (64 kg)"},
+        "tamale": {"price": 1680, "unit": "bag (64 kg)"},
+    },
+    "shea butter": {
+        "accra":  {"price": 420, "unit": "bowl (10 kg)"},
+        "kumasi": {"price": 390, "unit": "bowl (10 kg)"},
+        "tamale": {"price": 340, "unit": "bowl (10 kg)"},
+    },
+    "cashew": {
+        "accra":  {"price": 1100, "unit": "bag (80 kg)"},
+        "kumasi": {"price": 1050, "unit": "bag (80 kg)"},
+        "tamale": {"price": 980,  "unit": "bag (80 kg)"},
+    },
+    "palm oil": {
+        "accra":  {"price": 220, "unit": "gallon"},
+        "kumasi": {"price": 195, "unit": "gallon"},
+        "tamale": {"price": 210, "unit": "gallon"},
+    },
+    "maize": {
+        "accra":  {"price": 340, "unit": "bag (100 kg)"},
+        "kumasi": {"price": 320, "unit": "bag (100 kg)"},
+        "tamale": {"price": 290, "unit": "bag (100 kg)"},
+    },
     "yam": {
         "accra":  {"price": 320, "unit": "bag"},
         "kumasi": {"price": 295, "unit": "bag"},
         "tamale": {"price": 270, "unit": "bag"},
     },
-    "tomato": {
-        "accra":  {"price": 150, "unit": "crate"},
-        "kumasi": {"price": 138, "unit": "crate"},
-        "tamale": {"price": 125, "unit": "crate"},
-    },
-    "maize": {
-        "accra":  {"price": 340, "unit": "bag"},
-        "kumasi": {"price": 320, "unit": "bag"},
-        "tamale": {"price": 300, "unit": "bag"},
-    },
     "cassava": {
-        "accra":  {"price": 85, "unit": "bag"},
-        "kumasi": {"price": 75, "unit": "bag"},
-        "tamale": {"price": 65, "unit": "bag"},
+        "accra":  {"price": 85,  "unit": "bag"},
+        "kumasi": {"price": 75,  "unit": "bag"},
+        "tamale": {"price": 65,  "unit": "bag"},
+    },
+    "groundnut": {
+        "accra":  {"price": 480, "unit": "bag (80 kg)"},
+        "kumasi": {"price": 450, "unit": "bag (80 kg)"},
+        "tamale": {"price": 410, "unit": "bag (80 kg)"},
     },
     "plantain": {
-        "accra":  {"price": 55, "unit": "bunch"},
-        "kumasi": {"price": 45, "unit": "bunch"},
-        "tamale": {"price": 40, "unit": "bunch"},
+        "accra":  {"price": 55,  "unit": "bunch"},
+        "kumasi": {"price": 45,  "unit": "bunch"},
+        "tamale": {"price": 40,  "unit": "bunch"},
+    },
+    "rice": {
+        "accra":  {"price": 380, "unit": "bag (50 kg)"},
+        "kumasi": {"price": 360, "unit": "bag (50 kg)"},
+        "tamale": {"price": 330, "unit": "bag (50 kg)"},
     },
 }
 
@@ -54,26 +79,70 @@ MARKET_PRICES: dict[str, dict[str, dict]] = {
 # Keyword sets
 # ---------------------------------------------------------------------------
 
-_CROP_NAMES = set(MARKET_PRICES.keys())
+_CROP_NAMES_SINGLE = {k for k in MARKET_PRICES if " " not in k}
+_CROP_NAMES_MULTI  = {k for k in MARKET_PRICES if " " in k}
+_ALL_CROP_WORDS    = {w for name in MARKET_PRICES for w in name.split()}
 _CITY_NAMES = {"accra", "kumasi", "tamale"}
 
-_PRICE_KEYWORDS   = _CROP_NAMES | {"price", "cost", "market", "how much", "rate", "ghs", "selling", "buying"}
-_LISTING_PHRASES  = {"want to sell", "sell my", "i want sell", "list my", "advertise my", "post my"}
-_LISTING_KEYWORDS = {"list", "listing", "advertise", "register"}
+_CROP_ALIASES: dict[str, str] = {
+    "cacao": "cocoa", "kookoo": "cocoa", "chocolate": "cocoa",
+    "shea": "shea butter", "sheanut": "shea butter", "nkuto": "shea butter",
+    "cashewnut": "cashew", "cashew nut": "cashew", "cashew nuts": "cashew",
+    "palmoil": "palm oil", "palm": "palm oil", "abe": "palm oil",
+    "corn": "maize", "aburo": "maize",
+    "bayere": "yam", "bayerɛ": "yam",
+    "bankye": "cassava",
+    "nkatie": "groundnut", "peanut": "groundnut", "peanuts": "groundnut", "groundnuts": "groundnut",
+    "brodee": "plantain", "brɔdɛ": "plantain", "plantains": "plantain",
+    "emo": "rice",
+}
+
+_PRICE_SINGLE_KW   = {"price", "cost", "market", "rate", "ghs", "selling",
+                       "buying", "worth", "value", "charge", "expensive", "cheap"}
+_PRICE_PHRASES     = {"how much", "what price", "price of", "cost of",
+                      "going for", "selling at", "selling for", "current price",
+                      "market price", "today price", "ɔbɔ sɛn", "ne boɔ"}
+_LISTING_PHRASES   = {"want to sell", "sell my", "i want sell", "list my",
+                      "advertise my", "post my", "looking to sell"}
+_LISTING_KEYWORDS  = {"list", "listing", "advertise", "register"}
+
+# ---------------------------------------------------------------------------
+# Crop resolution
+# ---------------------------------------------------------------------------
+
+def _resolve_crop(lower: str) -> Optional[str]:
+    """Find a crop name in the text, checking multi-word names, aliases, then single-word names."""
+    for alias, canonical in _CROP_ALIASES.items():
+        if alias in lower:
+            return canonical
+    for name in _CROP_NAMES_MULTI:
+        if name in lower:
+            return name
+    for name in _CROP_NAMES_SINGLE:
+        if name in lower:
+            return name
+    return None
+
+
+def _is_price_intent(lower: str, tokens: set[str]) -> bool:
+    """Return True when the user is asking about prices/market info."""
+    if any(phrase in lower for phrase in _PRICE_PHRASES):
+        return True
+    if tokens & _PRICE_SINGLE_KW:
+        return True
+    if tokens & _ALL_CROP_WORDS:
+        return True
+    return False
 
 # ---------------------------------------------------------------------------
 # Instant (non-AI) handlers
 # ---------------------------------------------------------------------------
 
 def _handle_price(lower: str) -> str:
-    matched_crop: Optional[str] = None
-    for crop in _CROP_NAMES:
-        if crop in lower:
-            matched_crop = crop
-            break
+    matched_crop = _resolve_crop(lower)
 
     if matched_crop is None:
-        crop_list = ", ".join(_CROP_NAMES)
+        crop_list = ", ".join(sorted(MARKET_PRICES.keys()))
         return f"I have current prices for: {crop_list}. Which crop are you asking about?"
 
     cities = MARKET_PRICES[matched_crop]
@@ -81,32 +150,34 @@ def _handle_price(lower: str) -> str:
         if city in lower:
             entry = cities[city]
             return (
-                f"{matched_crop.capitalize()} is selling at "
+                f"{matched_crop.title()} is selling at "
                 f"GHS {entry['price']} per {entry['unit']} in {city.capitalize()} today."
             )
 
-    lines = [f"{matched_crop.capitalize()} prices today (GHS per unit):"]
+    lines = [f"{matched_crop.title()} prices today:"]
     for city, entry in cities.items():
         lines.append(f"  {city.capitalize()}: GHS {entry['price']} per {entry['unit']}")
     return "\n".join(lines)
 
 
 def _handle_listing(lower: str) -> str:
-    for crop in _CROP_NAMES:
-        if crop in lower:
-            return (
-                f"Your {crop} listing has been noted. "
-                "A buyer in your area will be contacted. "
-                "You will receive a confirmation SMS shortly."
-            )
+    matched_crop = _resolve_crop(lower)
+    if matched_crop:
+        return (
+            f"Your {matched_crop} listing has been noted. "
+            "A buyer in your area will be contacted. "
+            "You will receive a confirmation SMS shortly."
+        )
+    crop_list = ", ".join(sorted(MARKET_PRICES.keys()))
     return (
-        "To list your produce, tell me the crop name and quantity. "
+        f"To list your produce, tell me the crop name and quantity. "
+        f"I support: {crop_list}. "
         "For example: I want to sell 10 bags of maize."
     )
 
 
 # ---------------------------------------------------------------------------
-# Intent router — returns (response_text, used_gemini: bool)
+# Intent router
 # ---------------------------------------------------------------------------
 
 def _try_instant_intent(english_text: str) -> Optional[str]:
@@ -119,7 +190,7 @@ def _try_instant_intent(english_text: str) -> Optional[str]:
 
     if any(phrase in lower for phrase in _LISTING_PHRASES) or tokens & _LISTING_KEYWORDS:
         return _handle_listing(lower)
-    if tokens & _PRICE_KEYWORDS:
+    if _is_price_intent(lower, tokens):
         return _handle_price(lower)
 
     return None

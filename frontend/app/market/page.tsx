@@ -14,11 +14,16 @@ const CITIES = ["accra", "kumasi", "tamale"] as const;
 type City = (typeof CITIES)[number];
 
 const CROP_ACCENT: Record<string, string> = {
-  yam:      "border-l-amber-400",
-  maize:    "border-l-yellow-500",
-  tomato:   "border-l-red-400",
-  cassava:  "border-l-orange-400",
-  plantain: "border-l-lime-500",
+  cocoa:          "border-l-amber-800",
+  "shea butter":  "border-l-amber-300",
+  cashew:         "border-l-orange-400",
+  "palm oil":     "border-l-red-500",
+  maize:          "border-l-yellow-500",
+  yam:            "border-l-amber-500",
+  cassava:        "border-l-orange-300",
+  groundnut:      "border-l-yellow-700",
+  plantain:       "border-l-lime-500",
+  rice:           "border-l-stone-400",
 };
 
 function SkeletonCard() {
