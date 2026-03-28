@@ -1,0 +1,14 @@
+{
+  "name": "AGRIVOICE – Voice Marketplace for Ghanaian Farmers",
+  "short_name": "AGRIVOICE",
+  "description": "Speak in Twi, Ga, or English to check crop prices, list your produce, and get farming advice.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ede9dc",
+  "theme_color": "#0d2618",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ],
+  "categories": ["agriculture", "business", "productivity"]
+}

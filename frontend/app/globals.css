@@ -1,26 +1,115 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ------------------------------------------------------------------ */
+/* Design tokens                                                        */
+/* ------------------------------------------------------------------ */
 
 @theme inline {
+  /* ── Deep forest greens (buttons, CTAs, icons) ─────────────────── */
+  --color-forest-950: #060f0a;
+  --color-forest-900: #0d2618;
+  --color-forest-800: #1b4332;
+  --color-forest-700: #2d6a4f;
+  --color-forest-600: #40916c;
+  --color-forest-500: #52b788;
+  --color-forest-400: #74c69d;
+  --color-forest-300: #95d5b2;
+  --color-forest-200: #b7e4c7;
+  --color-forest-100: #d8f3dc;
+
+  /* ── Sand / warm cream (page + card backgrounds) ───────────────── */
+  --color-sand-bg:  #ede9dc;   /* body / page background             */
+  --color-sand-50:  #f5f2eb;   /* card surfaces, raised panels       */
+  --color-sand-100: #f0ede4;   /* slightly darker card               */
+  --color-sand-200: #e5e0d5;   /* dividers, subtle fill              */
+
+  /* ── Sage (mic-button container, light accent panels) ──────────── */
+  --color-sage-100: #dce8e0;   /* mic hero container background      */
+  --color-sage-200: #c8d9cf;   /* hover / pressed sage               */
+
+  /* ── Ink (all text + borders on light backgrounds) ─────────────── */
+  --color-ink-900: #0d2618;    /* primary text — same as forest-900  */
+  --color-ink-700: #2d5240;    /* secondary text                     */
+  --color-ink-500: #4e7062;    /* muted / caption text               */
+  --color-ink-300: #8aaa98;    /* placeholder text                   */
+  --color-ink-200: #b0c8bc;    /* light borders                      */
+  --color-ink-100: #d4e3dc;    /* very subtle borders / dividers     */
+  --color-ink-50:  #e8f0ed;    /* faintest tint                      */
+
+  /* ── Gold accent ───────────────────────────────────────────────── */
+  --color-gold-400: #c59a20;
+  --color-gold-300: #d4aa30;
+  --color-gold-200: #e8cc70;
+
+  /* ── Semantic aliases ───────────────────────────────────────────── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ------------------------------------------------------------------ */
+/* Mic-button pulse rings                                               */
+/* ------------------------------------------------------------------ */
+
+@keyframes mic-ring {
+  0%   { transform: scale(1);   opacity: 0.45; }
+  100% { transform: scale(2.5); opacity: 0;    }
 }
+
+.mic-ring   { animation: mic-ring 2.4s ease-out        infinite; }
+.mic-ring-2 { animation: mic-ring 2.4s ease-out 0.8s   infinite; }
+.mic-ring-3 { animation: mic-ring 2.4s ease-out 1.6s   infinite; }
+
+.mic-ring-rec   { animation: mic-ring 1.1s ease-out       infinite; }
+.mic-ring-rec-2 { animation: mic-ring 1.1s ease-out 0.4s  infinite; }
+
+/* ------------------------------------------------------------------ */
+/* Entrance animation                                                   */
+/* ------------------------------------------------------------------ */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.fade-in-up { animation: fade-in-up 0.28s ease-out both; }
+
+/* ------------------------------------------------------------------ */
+/* Skeleton shimmer (light theme)                                       */
+/* ------------------------------------------------------------------ */
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.05) 25%,
+    rgba(0,0,0,0.10) 50%,
+    rgba(0,0,0,0.05) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                 */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --background: #ede9dc;
+  --foreground: #0d2618;
+}
+
+html  { scroll-behavior: smooth; }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }

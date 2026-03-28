@@ -4,8 +4,8 @@ from pydantic import BaseModel
 
 class VoiceRequest(BaseModel):
     """
-    Optional text-only fallback when the caller cannot send audio.
-    The language field controls which GhanaNLP language is used.
+    Text-only pipeline (no STT). `language` is the GhanaNLP TTS voice code:
+    use an ASR-supported code (tw, gaa, dag, yo, ee, ki, ha); unknown/en maps to tw.
     """
 
     text: Optional[str] = None
