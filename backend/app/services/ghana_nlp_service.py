@@ -91,9 +91,17 @@ class GhanaNLPService:
         """
         Translate text between a supported language pair.
 
+        The SDK POSTs {"in": text, "lang": language_pair} to /v1/translate
+        and returns response.json().  We need to extract the translated string
+        from whatever shape the response takes.
+
         Raises RuntimeError on API errors.
         """
+        import logging
+        _log = logging.getLogger(__name__)
+
         result = self._client.translate(text, language_pair=language_pair)
+        _log.info("GhanaNLP translate raw response (type=%s): %r", type(result).__name__, result)
 
         if _is_error(result):
             raise RuntimeError(
@@ -104,9 +112,19 @@ class GhanaNLPService:
             return result
 
         if isinstance(result, dict):
-            for key in ("translation", "out", "text", "result"):
+            for key in ("translatedText", "translated_text", "translation",
+                        "out", "output", "text", "result"):
                 if key in result:
                     return str(result[key])
+            _log.warning("GhanaNLP translate dict had no known text key: %s", result)
             return str(result)
+
+        if isinstance(result, list) and result:
+            first = result[0]
+            if isinstance(first, dict):
+                for key in ("translatedText", "translated_text", "translation", "text"):
+                    if key in first:
+                        return str(first[key])
+            return str(first)
 
         return str(result)

@@ -4,3 +4,4 @@ python-dotenv
 ghana-nlp
 pydantic
 python-multipart
+google-genai

@@ -1,20 +1,25 @@
 """
 voice_service.py
 Core voice-processing pipeline:
-  1. Accept transcribed text + language
-  2. Route to the correct intent handler
-  3. Build a plain-English response
-  4. Synthesise the response to speech via GhanaNLP TTS (async-wrapped)
+  1. Accept transcribed text (in any GhanaNLP-supported language) + language code
+  2. Translate to English via GhanaNLP
+  3. Route intent:
+     - price / listing  -->  local keyword handlers (instant, no AI needed)
+     - everything else  -->  Gemini AI farming advisor
+  4. Synthesise the response to speech via GhanaNLP TTS
 """
 
 import asyncio
+import logging
 from typing import Optional
 
 from app.services.ghana_nlp_service import GhanaNLPService
+from app.services.gemini_service import GeminiService
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Market price data — keyed by crop then market city
-# Unit is the denominator for the given price (GHS)
+# Market price data
 # ---------------------------------------------------------------------------
 
 MARKET_PRICES: dict[str, dict[str, dict]] = {
@@ -46,68 +51,21 @@ MARKET_PRICES: dict[str, dict[str, dict]] = {
 }
 
 # ---------------------------------------------------------------------------
-# Advisory content
-# ---------------------------------------------------------------------------
-
-_ADVISORIES: dict[str, str] = {
-    "storage": (
-        "To reduce post-harvest losses: store grains in hermetic bags or metal silos "
-        "in a cool, dry place. Keep maize moisture below 13 percent before bagging. "
-        "Inspect every two weeks for pests and mould."
-    ),
-    "subsidy": (
-        "Under the Planting for Food and Jobs programme, registered farmers can access "
-        "subsidised fertiliser and improved seeds at certified agro-input dealers. "
-        "Visit your district agriculture office or dial 233-MOFA to register."
-    ),
-    "weather": (
-        "The current forecast shows partly cloudy skies with a chance of afternoon rain "
-        "across southern Ghana. Northern regions expect dry harmattan conditions. "
-        "Major season planting windows open from April in the south and June in the north."
-    ),
-    "planting": (
-        "Major season for southern Ghana runs April to July; minor season is September to November. "
-        "For northern Ghana, the single rainy season runs May to October. "
-        "Always test your soil before applying fertiliser."
-    ),
-    "pest": (
-        "Common threats this season include fall armyworm on maize and tomato leaf miner. "
-        "Apply recommended pesticides early in the morning or evening. "
-        "Contact your local extension officer for free scouting support."
-    ),
-    "fertiliser": (
-        "For maize, apply NPK 15-15-15 at planting and top-dress with sulphate of ammonia "
-        "at six weeks. For yam and cassava, compost or well-rotted manure improves yields "
-        "without the risk of over-application."
-    ),
-}
-
-# ---------------------------------------------------------------------------
-# Keyword sets per intent
+# Keyword sets
 # ---------------------------------------------------------------------------
 
 _CROP_NAMES = set(MARKET_PRICES.keys())
 _CITY_NAMES = {"accra", "kumasi", "tamale"}
 
-_PRICE_KEYWORDS    = _CROP_NAMES | {"price", "cost", "market", "how much", "rate", "ghs", "selling", "buying"}
-# Listing is detected by explicit phrases to avoid false-positive matches
-# on words like "sell" that appear in price questions too.
-_LISTING_PHRASES   = {"want to sell", "sell my", "i want sell", "list my", "advertise my", "post my"}
-_LISTING_KEYWORDS  = {"list", "listing", "advertise", "register"}  # single-token fallbacks
-_STORAGE_KEYWORDS  = {"store", "storage", "keep", "preserve", "spoil", "warehouse", "silo", "loss"}
-_SUBSIDY_KEYWORDS  = {"subsidy", "subsidies", "government", "pfj", "planting for food", "free seed", "support", "input"}
-_WEATHER_KEYWORDS  = {"weather", "rain", "forecast", "sun", "dry", "flood", "season", "harmattan", "climate"}
-_PLANTING_KEYWORDS = {"plant", "planting", "sow", "harvest", "when to", "season", "nursery", "germinate"}
-_PEST_KEYWORDS     = {"pest", "insect", "disease", "fungus", "worm", "spray", "armyworm", "miner", "blight"}
-_FERT_KEYWORDS     = {"fertilizer", "fertiliser", "fertilise", "fertilize", "manure", "npk", "compost", "nutrient"}
-
+_PRICE_KEYWORDS   = _CROP_NAMES | {"price", "cost", "market", "how much", "rate", "ghs", "selling", "buying"}
+_LISTING_PHRASES  = {"want to sell", "sell my", "i want sell", "list my", "advertise my", "post my"}
+_LISTING_KEYWORDS = {"list", "listing", "advertise", "register"}
 
 # ---------------------------------------------------------------------------
-# Intent handlers
+# Instant (non-AI) handlers
 # ---------------------------------------------------------------------------
 
 def _handle_price(lower: str) -> str:
-    """Return price information for a specific crop, optionally filtered by city."""
     matched_crop: Optional[str] = None
     for crop in _CROP_NAMES:
         if crop in lower:
@@ -116,14 +74,9 @@ def _handle_price(lower: str) -> str:
 
     if matched_crop is None:
         crop_list = ", ".join(_CROP_NAMES)
-        return (
-            f"I have current prices for: {crop_list}. "
-            "Which crop are you asking about?"
-        )
+        return f"I have current prices for: {crop_list}. Which crop are you asking about?"
 
     cities = MARKET_PRICES[matched_crop]
-
-    # Check whether the farmer specified a city
     for city in _CITY_NAMES:
         if city in lower:
             entry = cities[city]
@@ -132,7 +85,6 @@ def _handle_price(lower: str) -> str:
                 f"GHS {entry['price']} per {entry['unit']} in {city.capitalize()} today."
             )
 
-    # No specific city — return all three
     lines = [f"{matched_crop.capitalize()} prices today (GHS per unit):"]
     for city, entry in cities.items():
         lines.append(f"  {city.capitalize()}: GHS {entry['price']} per {entry['unit']}")
@@ -140,7 +92,6 @@ def _handle_price(lower: str) -> str:
 
 
 def _handle_listing(lower: str) -> str:
-    """Mock confirmation for a crop listing request."""
     for crop in _CROP_NAMES:
         if crop in lower:
             return (
@@ -154,35 +105,49 @@ def _handle_listing(lower: str) -> str:
     )
 
 
-def _route_intent(lower: str) -> str:
+# ---------------------------------------------------------------------------
+# Intent router — returns (response_text, used_gemini: bool)
+# ---------------------------------------------------------------------------
+
+def _try_instant_intent(english_text: str) -> Optional[str]:
+    """
+    Check for price / listing intents that don't need AI.
+    Returns the response string, or None if this should go to Gemini.
+    """
+    lower = english_text.lower()
     tokens = set(lower.split())
 
-    # Specific intents are checked before price so that a crop name
-    # mentioned in a non-price question (e.g. "store my cassava") does
-    # not accidentally trigger the price handler.
     if any(phrase in lower for phrase in _LISTING_PHRASES) or tokens & _LISTING_KEYWORDS:
         return _handle_listing(lower)
-    if tokens & _STORAGE_KEYWORDS:
-        return _ADVISORIES["storage"]
-    if tokens & _SUBSIDY_KEYWORDS:
-        return _ADVISORIES["subsidy"]
-    if tokens & _PEST_KEYWORDS:
-        return _ADVISORIES["pest"]
-    if tokens & _FERT_KEYWORDS:
-        return _ADVISORIES["fertiliser"]
-    if tokens & _WEATHER_KEYWORDS:
-        return _ADVISORIES["weather"]
-    if tokens & _PLANTING_KEYWORDS:
-        return _ADVISORIES["planting"]
     if tokens & _PRICE_KEYWORDS:
         return _handle_price(lower)
 
-    return (
-        "I am AGRIVOICE, your farming assistant. "
-        "You can ask me about crop prices in Accra, Kumasi or Tamale, "
-        "how to list your produce, storage tips, subsidies, weather, "
-        "planting seasons, pests, or fertiliser advice."
-    )
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Language-pair helper
+# ---------------------------------------------------------------------------
+
+_GHANANLP_TRANSLATION_PAIRS = {
+    "tw": ("tw-en", "en-tw"),
+    "gaa": ("gaa-en", "en-gaa"),
+    "ee": ("ee-en", "en-ee"),
+    "dag": ("dag-en", "en-dag"),
+    "yo": ("yo-en", "en-yo"),
+    "ha": ("ha-en", "en-ha"),
+    "ki": ("ki-en", "en-ki"),
+}
+
+
+def _to_english_pair(lang: str) -> str | None:
+    pair = _GHANANLP_TRANSLATION_PAIRS.get(lang)
+    return pair[0] if pair else None
+
+
+def _from_english_pair(lang: str) -> str | None:
+    pair = _GHANANLP_TRANSLATION_PAIRS.get(lang)
+    return pair[1] if pair else None
 
 
 # ---------------------------------------------------------------------------
@@ -190,10 +155,77 @@ def _route_intent(lower: str) -> str:
 # ---------------------------------------------------------------------------
 
 class VoiceService:
-    """Orchestrates intent matching and TTS for a transcribed farmer query."""
+    """Orchestrates translation, intent matching, Gemini AI, and TTS."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._nlp = GhanaNLPService()
+        self._gemini: GeminiService | None = None
+
+    def _get_gemini(self) -> GeminiService:
+        if self._gemini is None:
+            self._gemini = GeminiService()
+        return self._gemini
+
+    async def _translate_to_english(self, text: str, lang: str) -> str:
+        """Translate local-language text to English with retries."""
+        pair = _to_english_pair(lang)
+        if not pair:
+            logger.info("No translation pair for lang=%s, passing text as-is", lang)
+            return text
+
+        last_exc: Exception | None = None
+        for attempt in range(1, 4):
+            try:
+                translated = await asyncio.to_thread(self._nlp.translate, text, pair)
+                if translated and translated.strip():
+                    clean = translated.strip()
+                    logger.info(
+                        "Translated [%s] attempt %d: %r -> %r",
+                        pair, attempt, text[:80], clean[:80],
+                    )
+                    return clean
+                logger.warning("Translation [%s] attempt %d returned empty", pair, attempt)
+            except Exception as exc:
+                last_exc = exc
+                logger.warning("Translation [%s] attempt %d failed: %s", pair, attempt, exc)
+                if attempt < 3:
+                    await asyncio.sleep(0.5 * attempt)
+
+        logger.error(
+            "All translation attempts failed for [%s]. Last error: %s. Using original text.",
+            pair, last_exc,
+        )
+        return text
+
+    async def _translate_from_english(self, text: str, lang: str) -> str:
+        """Translate English response back to the farmer's language with retries."""
+        pair = _from_english_pair(lang)
+        if not pair:
+            return text
+
+        last_exc: Exception | None = None
+        for attempt in range(1, 4):
+            try:
+                translated = await asyncio.to_thread(self._nlp.translate, text, pair)
+                if translated and translated.strip():
+                    clean = translated.strip()
+                    logger.info(
+                        "Translated back [%s] attempt %d: %r -> %r",
+                        pair, attempt, text[:80], clean[:80],
+                    )
+                    return clean
+                logger.warning("Translation back [%s] attempt %d returned empty", pair, attempt)
+            except Exception as exc:
+                last_exc = exc
+                logger.warning("Translation back [%s] attempt %d failed: %s", pair, attempt, exc)
+                if attempt < 3:
+                    await asyncio.sleep(0.5 * attempt)
+
+        logger.error(
+            "All back-translation attempts failed for [%s]. Last error: %s. Returning English.",
+            pair, last_exc,
+        )
+        return text
 
     async def process(
         self,
@@ -201,25 +233,60 @@ class VoiceService:
         language: str = "tw",
     ) -> dict:
         """
-        Run intent routing then synthesise a spoken response.
-
-        Returns a dict with keys:
-            transcribed_text, response_text, response_audio_base64, language
+        Full pipeline:
+          1. Translate transcribed text to English
+          2. Try instant intent (price/listing)
+          3. If no instant match -> ask Gemini for farming advice
+          4. TTS the response in the farmer's language
         """
-        response_text = _route_intent(transcribed_text.lower())
+        english_text = await self._translate_to_english(transcribed_text, language)
+        translation_worked = english_text != transcribed_text
 
-        # TTS is a blocking HTTP call — run it in a thread so the event loop
-        # stays free for other requests.
+        logger.info(
+            "Pipeline: lang=%s | original=%r | english=%r | translated=%s",
+            language, transcribed_text, english_text, translation_worked,
+        )
+
+        instant = _try_instant_intent(english_text)
+        if instant is not None:
+            response_en = instant
+        else:
+            gemini_input = english_text
+            if not translation_worked and language != "en":
+                gemini_input = (
+                    f"[The farmer spoke in {language}. "
+                    f"Their transcribed speech is: \"{transcribed_text}\". "
+                    f"Please interpret this and give farming advice in English.]"
+                )
+            try:
+                gemini = self._get_gemini()
+                response_en = await gemini.ask(gemini_input)
+            except Exception as exc:
+                logger.error("Gemini call failed: %s", exc)
+                response_en = (
+                    "I could not reach the AI advisor right now. "
+                    "Please try again shortly, or visit your nearest MOFA office for help."
+                )
+
+        # Translate the English response back to the farmer's language
+        response_local = await self._translate_from_english(response_en, language)
+
+        logger.info(
+            "Response: en=%r | local(%s)=%r",
+            response_en[:80], language, response_local[:80],
+        )
+
+        # TTS in the farmer's language using the translated text
         try:
             audio_base64: Optional[str] = await asyncio.to_thread(
-                self._nlp.text_to_speech, response_text, language
+                self._nlp.text_to_speech, response_local, language
             )
         except Exception:
             audio_base64 = None
 
         return {
             "transcribed_text": transcribed_text,
-            "response_text": response_text,
+            "response_text": response_local,
             "response_audio_base64": audio_base64,
             "language": language,
         }
