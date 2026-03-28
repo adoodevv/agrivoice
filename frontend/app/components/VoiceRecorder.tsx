@@ -77,7 +77,7 @@ export function humaniseError(err: unknown): string {
 }
 
 /* ------------------------------------------------------------------
-   Shared result card
+   Result card
 ------------------------------------------------------------------ */
 
 interface ResultCardProps {
@@ -114,40 +114,40 @@ export function ResultCard({ result, onReset }: ResultCardProps) {
   }
 
   return (
-    <div className="w-full rounded-2xl border border-ink-100 bg-sand-50 p-5 space-y-4 fade-in-up shadow-sm">
+    <div className="w-full rounded-2xl border border-ink-100/80 bg-sand-50 overflow-hidden scale-in shadow-sm">
       {/* Transcription */}
-      <div>
-        <p className="text-[10px] uppercase tracking-widest text-ink-500 font-semibold mb-1.5">
+      <div className="px-5 pt-5 pb-4">
+        <p className="text-[9px] uppercase tracking-[0.14em] text-ink-400 font-bold mb-2">
           {t("you_said")}
         </p>
-        <p className="text-sm text-ink-700 leading-relaxed italic">
+        <p className="text-[13px] text-ink-600 leading-relaxed italic">
           &ldquo;{result.transcribed_text}&rdquo;
         </p>
       </div>
 
-      <div className="border-t border-ink-100" />
+      <div className="h-px bg-ink-100/60 mx-5" />
 
       {/* Response */}
-      <div>
-        <p className="text-[10px] uppercase tracking-widest text-ink-500 font-semibold mb-1.5">
+      <div className="px-5 pt-4 pb-4">
+        <p className="text-[9px] uppercase tracking-[0.14em] text-ink-400 font-bold mb-2">
           {t("response")}
         </p>
-        <p className="text-sm text-ink-900 leading-relaxed whitespace-pre-line font-medium">
+        <p className="text-[13px] text-ink-900 leading-[1.65] whitespace-pre-line">
           {result.response_text}
         </p>
       </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2 pt-1">
+      {/* Actions bar */}
+      <div className="flex items-center gap-2 px-5 pb-5 pt-1">
         {result.response_audio_base64 && (
           <button
             onClick={handlePlay}
             className={[
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all duration-200",
+              "flex items-center gap-1.5 pl-3.5 pr-4 py-2 rounded-xl text-[11px] font-bold transition-all duration-200",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-800/40",
               isPlaying
-                ? "bg-gold-400/15 border-gold-400/40 text-gold-400"
-                : "bg-forest-900 border-forest-900 text-sand-50 hover:bg-forest-800",
+                ? "bg-gold-300/15 text-gold-400 ring-1 ring-gold-300/30"
+                : "bg-forest-900 text-sand-50 hover:bg-forest-800 shadow-sm",
             ].join(" ")}
           >
             {isPlaying
@@ -159,9 +159,9 @@ export function ResultCard({ result, onReset }: ResultCardProps) {
         )}
         <button
           onClick={onReset}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-ink-200 bg-sand-bg text-ink-700 hover:bg-sand-200 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-800/30"
+          className="flex items-center gap-1.5 pl-3.5 pr-4 py-2 rounded-xl text-[11px] font-bold border border-ink-200/80 bg-sand-bg text-ink-600 hover:bg-sand-200 hover:text-ink-800 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-800/30"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
+          <RotateCcw className="w-3 h-3" />
           {t("ask_again")}
         </button>
       </div>
@@ -170,7 +170,7 @@ export function ResultCard({ result, onReset }: ResultCardProps) {
 }
 
 /* ------------------------------------------------------------------
-   Main VoiceRecorder component
+   Main VoiceRecorder
 ------------------------------------------------------------------ */
 
 export default function VoiceRecorder() {
@@ -181,8 +181,6 @@ export default function VoiceRecorder() {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-
-  /* ── Recording ──────────────────────────────────────────────────── */
 
   async function startRecording() {
     try {
@@ -218,8 +216,6 @@ export default function VoiceRecorder() {
     setRecState("processing");
   }
 
-  /* ── API submission ─────────────────────────────────────────────── */
-
   async function submitAudio(blob: Blob, mimeType: string) {
     const form = new FormData();
     form.append("audio", blob, `recording.${mimeToExt(mimeType)}`);
@@ -246,8 +242,6 @@ export default function VoiceRecorder() {
     }
   }
 
-  /* ── Handlers ───────────────────────────────────────────────────── */
-
   function handleMicClick() {
     if (recState === "recording") {
       stopRecording();
@@ -267,26 +261,22 @@ export default function VoiceRecorder() {
   const isRecording  = recState === "recording";
   const isProcessing = recState === "processing";
 
-  /* ── Render ─────────────────────────────────────────────────────── */
-
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto select-none">
+    <div className="flex flex-col items-center gap-5 w-full max-w-sm mx-auto select-none">
 
-      {/* Mic button + pulse rings */}
-      <div className="relative flex items-center justify-center">
-        {/* Idle pulse rings — dark green, low opacity on cream bg */}
+      {/* Mic button + rings */}
+      <div className="relative flex items-center justify-center h-36 w-36">
         {recState === "idle" && (
           <>
-            <span className="absolute w-36 h-36 rounded-full bg-forest-900/10 mic-ring" />
-            <span className="absolute w-36 h-36 rounded-full bg-forest-900/7  mic-ring-2" />
-            <span className="absolute w-36 h-36 rounded-full bg-forest-900/5  mic-ring-3" />
+            <span className="absolute inset-0 rounded-full bg-forest-900/8  mic-ring" />
+            <span className="absolute inset-0 rounded-full bg-forest-900/5  mic-ring-2" />
+            <span className="absolute inset-0 rounded-full bg-forest-900/3  mic-ring-3" />
           </>
         )}
-        {/* Recording rings — amber on cream */}
         {isRecording && (
           <>
-            <span className="absolute w-36 h-36 rounded-full bg-gold-400/25 mic-ring-rec" />
-            <span className="absolute w-36 h-36 rounded-full bg-gold-400/15 mic-ring-rec-2" />
+            <span className="absolute inset-0 rounded-full bg-gold-400/20 mic-ring-rec" />
+            <span className="absolute inset-0 rounded-full bg-gold-400/10 mic-ring-rec-2" />
           </>
         )}
 
@@ -299,33 +289,33 @@ export default function VoiceRecorder() {
             t("tap_to_speak")
           }
           className={[
-            "relative z-10 flex items-center justify-center w-24 h-24 rounded-full",
-            "transition-all duration-300 ease-out active:scale-95",
-            "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-forest-900/30",
+            "relative z-10 flex items-center justify-center w-[76px] h-[76px] rounded-full",
+            "transition-all duration-300 ease-out active:scale-93",
+            "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-forest-900/25",
             isProcessing
-              ? "cursor-not-allowed bg-forest-800 opacity-60"
+              ? "cursor-not-allowed bg-forest-800 opacity-50"
               : isRecording
-              ? "cursor-pointer hover:scale-105 bg-gold-400 shadow-[0_8px_30px_rgba(197,154,32,0.40)]"
-              : "cursor-pointer hover:scale-105 bg-forest-900 shadow-[0_8px_30px_rgba(13,38,24,0.30)]",
+              ? "cursor-pointer bg-gold-400 shadow-[0_6px_28px_rgba(197,154,32,0.35)] hover:shadow-[0_8px_32px_rgba(197,154,32,0.45)]"
+              : "cursor-pointer bg-forest-900 shadow-[0_6px_28px_rgba(13,38,24,0.25)] hover:shadow-[0_10px_36px_rgba(13,38,24,0.35)] hover:scale-105",
           ].join(" ")}
         >
           {isProcessing ? (
-            <Loader2 className="w-9 h-9 text-sand-50 animate-spin" />
+            <Loader2 className="w-8 h-8 text-sand-50 animate-spin" />
           ) : isRecording ? (
-            <Square className="w-8 h-8 text-forest-900 fill-forest-900" strokeWidth={0} />
+            <Square className="w-7 h-7 text-forest-900 fill-forest-900" strokeWidth={0} />
           ) : (
-            <Mic className="w-9 h-9 text-sand-50" strokeWidth={2} />
+            <Mic className="w-8 h-8 text-sand-50" strokeWidth={1.8} />
           )}
         </button>
       </div>
 
-      {/* Status label */}
+      {/* Status */}
       <p
         className={[
-          "text-sm font-semibold tracking-wide transition-all duration-300 -mt-2 text-center",
-          isRecording  ? "text-gold-400"                  :
-          isProcessing ? "text-ink-500 animate-pulse"     :
-                         "text-ink-500",
+          "text-[13px] font-semibold tracking-wide transition-all duration-300 text-center -mt-1",
+          isRecording  ? "text-gold-400"              :
+          isProcessing ? "text-ink-400 animate-pulse"  :
+                         "text-ink-400",
         ].join(" ")}
       >
         {recState === "idle"       && t("tap_to_speak")}
@@ -333,20 +323,20 @@ export default function VoiceRecorder() {
         {recState === "processing" && t("processing")}
       </p>
 
-      {/* Result card */}
+      {/* Result */}
       {recState === "success" && result && (
         <ResultCard result={result} onReset={reset} />
       )}
 
-      {/* Error card */}
+      {/* Error */}
       {recState === "error" && errorMsg && (
-        <div className="w-full rounded-2xl border border-red-200 bg-red-50 p-4 flex gap-3 items-start fade-in-up">
-          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+        <div className="w-full rounded-2xl border border-red-200/80 bg-red-50 p-4 flex gap-3 items-start scale-in">
+          <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-red-700 leading-relaxed">{errorMsg}</p>
+            <p className="text-[12px] text-red-700 leading-relaxed">{errorMsg}</p>
             <button
               onClick={reset}
-              className="mt-2 text-[11px] font-semibold text-red-600 hover:text-red-800 underline underline-offset-2 transition-colors"
+              className="mt-2.5 text-[11px] font-bold text-red-500 hover:text-red-700 underline underline-offset-2 decoration-red-300 transition-colors"
             >
               {t("ask_again")}
             </button>

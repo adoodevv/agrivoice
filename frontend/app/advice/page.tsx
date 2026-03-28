@@ -6,15 +6,7 @@ import VoiceRecorder, { ResultCard, VoiceApiResponse, humaniseError } from "../c
 import { API_URL } from "../lib/api";
 import { useLanguage } from "../context/LanguageContext";
 
-/* ------------------------------------------------------------------
-   Text query sub-component
------------------------------------------------------------------- */
-
-interface TextQueryProps {
-  onResult: (r: VoiceApiResponse) => void;
-}
-
-function TextQuery({ onResult }: TextQueryProps) {
+function TextQuery({ onResult }: { onResult: (r: VoiceApiResponse) => void }) {
   const { speechLanguage, t } = useLanguage();
   const [text,    setText]    = useState("");
   const [loading, setLoading] = useState(false);
@@ -54,13 +46,13 @@ function TextQuery({ onResult }: TextQueryProps) {
           onChange={(e) => setText(e.target.value)}
           placeholder={t("advice_placeholder")}
           disabled={loading}
-          className="w-full rounded-xl border border-ink-200 bg-sand-50 px-4 py-3 pr-12 text-sm text-ink-900 placeholder-ink-300 focus:outline-none focus:ring-2 focus:ring-forest-900/30 focus:border-transparent transition-all disabled:opacity-50"
+          className="w-full rounded-xl border border-ink-200/80 bg-sand-50 px-4 py-3 pr-12 text-sm text-ink-900 placeholder-ink-300 focus:outline-none focus:ring-2 focus:ring-forest-900/25 focus:border-transparent transition-all disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={loading || !text.trim()}
           aria-label="Send"
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg bg-forest-900 text-sand-50 hover:bg-forest-800 disabled:opacity-40 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-900/40"
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg bg-forest-900 text-sand-50 hover:bg-forest-800 disabled:opacity-30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-900/40"
         >
           {loading
             ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -69,7 +61,7 @@ function TextQuery({ onResult }: TextQueryProps) {
         </button>
       </div>
       {error && (
-        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
+        <p className="text-xs text-red-600 bg-red-50 border border-red-200/80 rounded-xl px-4 py-2.5">
           {error}
         </p>
       )}
@@ -77,49 +69,45 @@ function TextQuery({ onResult }: TextQueryProps) {
   );
 }
 
-/* ------------------------------------------------------------------
-   Page
------------------------------------------------------------------- */
-
 export default function AdvicePage() {
   const { t } = useLanguage();
   const [textResult, setTextResult] = useState<VoiceApiResponse | null>(null);
 
   return (
-    <div className="px-4 pt-7 pb-6 max-w-lg mx-auto w-full">
+    <div className="px-4 pt-8 pb-8 max-w-lg mx-auto w-full">
 
-      {/* Page header */}
-      <div className="mb-6">
+      <div className="mb-7 fade-in-up">
         <div className="flex items-center gap-2 mb-1">
-          <Leaf className="w-4.5 h-4.5 text-ink-900" strokeWidth={2} />
-          <h2 className="text-xl font-bold text-ink-900">{t("advice_title")}</h2>
+          <Leaf className="w-[18px] h-[18px] text-ink-900" strokeWidth={2.2} />
+          <h2 className="text-xl font-bold text-ink-900 tracking-tight">{t("advice_title")}</h2>
         </div>
-        <p className="text-xs text-ink-500">{t("advice_subtitle")}</p>
+        <p className="text-[11px] text-ink-400 mt-0.5">{t("advice_subtitle")}</p>
       </div>
 
-      {/* Voice section */}
-      <div className="rounded-2xl border border-ink-100 bg-sage-100 px-5 py-8 flex flex-col items-center mb-5">
-        <p className="text-[10px] uppercase tracking-widest text-ink-500 font-bold mb-6">
+      {/* Voice */}
+      <div className="rounded-[22px] border border-ink-100/60 bg-gradient-to-b from-sage-100 to-sage-100/40 px-5 py-8 flex flex-col items-center mb-6 fade-in-up stagger-1">
+        <p className="text-[9px] uppercase tracking-[0.14em] text-ink-400 font-bold mb-6">
           {t("voice_input")}
         </p>
         <VoiceRecorder />
       </div>
 
       {/* Divider */}
-      <div className="flex items-center gap-3 my-5">
-        <div className="flex-1 h-px bg-ink-100" />
-        <span className="text-[10px] uppercase tracking-widest text-ink-400 font-semibold">
+      <div className="flex items-center gap-4 my-6">
+        <div className="flex-1 h-px bg-ink-100/60" />
+        <span className="text-[9px] uppercase tracking-[0.14em] text-ink-300 font-bold">
           {t("or_type")}
         </span>
-        <div className="flex-1 h-px bg-ink-100" />
+        <div className="flex-1 h-px bg-ink-100/60" />
       </div>
 
-      {/* Text query */}
-      <TextQuery onResult={(r) => { setTextResult(r); }} />
+      {/* Text */}
+      <div className="fade-in-up stagger-2">
+        <TextQuery onResult={setTextResult} />
+      </div>
 
-      {/* Text result */}
       {textResult && (
-        <div className="mt-5">
+        <div className="mt-5 fade-in-up">
           <ResultCard result={textResult} onReset={() => setTextResult(null)} />
         </div>
       )}

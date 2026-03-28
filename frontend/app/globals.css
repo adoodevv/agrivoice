@@ -1,11 +1,10 @@
 @import "tailwindcss";
 
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 /* Design tokens                                                        */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 
 @theme inline {
-  /* ── Deep forest greens (buttons, CTAs, icons) ─────────────────── */
   --color-forest-950: #060f0a;
   --color-forest-900: #0d2618;
   --color-forest-800: #1b4332;
@@ -17,44 +16,40 @@
   --color-forest-200: #b7e4c7;
   --color-forest-100: #d8f3dc;
 
-  /* ── Sand / warm cream (page + card backgrounds) ───────────────── */
-  --color-sand-bg:  #ede9dc;   /* body / page background             */
-  --color-sand-50:  #f5f2eb;   /* card surfaces, raised panels       */
-  --color-sand-100: #f0ede4;   /* slightly darker card               */
-  --color-sand-200: #e5e0d5;   /* dividers, subtle fill              */
+  --color-sand-bg:  #ede9dc;
+  --color-sand-50:  #f5f2eb;
+  --color-sand-100: #f0ede4;
+  --color-sand-200: #e5e0d5;
 
-  /* ── Sage (mic-button container, light accent panels) ──────────── */
-  --color-sage-100: #dce8e0;   /* mic hero container background      */
-  --color-sage-200: #c8d9cf;   /* hover / pressed sage               */
+  --color-sage-100: #dce8e0;
+  --color-sage-200: #c8d9cf;
 
-  /* ── Ink (all text + borders on light backgrounds) ─────────────── */
-  --color-ink-900: #0d2618;    /* primary text — same as forest-900  */
-  --color-ink-700: #2d5240;    /* secondary text                     */
-  --color-ink-500: #4e7062;    /* muted / caption text               */
-  --color-ink-300: #8aaa98;    /* placeholder text                   */
-  --color-ink-200: #b0c8bc;    /* light borders                      */
-  --color-ink-100: #d4e3dc;    /* very subtle borders / dividers     */
-  --color-ink-50:  #e8f0ed;    /* faintest tint                      */
+  --color-ink-900: #0d2618;
+  --color-ink-700: #2d5240;
+  --color-ink-500: #4e7062;
+  --color-ink-400: #6c8f7e;
+  --color-ink-300: #8aaa98;
+  --color-ink-200: #b0c8bc;
+  --color-ink-100: #d4e3dc;
+  --color-ink-50:  #e8f0ed;
 
-  /* ── Gold accent ───────────────────────────────────────────────── */
   --color-gold-400: #c59a20;
   --color-gold-300: #d4aa30;
   --color-gold-200: #e8cc70;
 
-  /* ── Semantic aliases ───────────────────────────────────────────── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-/* ------------------------------------------------------------------ */
-/* Mic-button pulse rings                                               */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
+/* Mic pulse rings                                                      */
+/* ================================================================== */
 
 @keyframes mic-ring {
-  0%   { transform: scale(1);   opacity: 0.45; }
-  100% { transform: scale(2.5); opacity: 0;    }
+  0%   { transform: scale(1);   opacity: 0.40; }
+  100% { transform: scale(2.4); opacity: 0;    }
 }
 
 .mic-ring   { animation: mic-ring 2.4s ease-out        infinite; }
@@ -64,20 +59,38 @@
 .mic-ring-rec   { animation: mic-ring 1.1s ease-out       infinite; }
 .mic-ring-rec-2 { animation: mic-ring 1.1s ease-out 0.4s  infinite; }
 
-/* ------------------------------------------------------------------ */
-/* Entrance animation                                                   */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
+/* Entrance                                                             */
+/* ================================================================== */
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0);    }
 }
 
-.fade-in-up { animation: fade-in-up 0.28s ease-out both; }
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
-/* ------------------------------------------------------------------ */
-/* Skeleton shimmer (light theme)                                       */
-/* ------------------------------------------------------------------ */
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+.fade-in-up { animation: fade-in-up 0.32s ease-out both; }
+.fade-in    { animation: fade-in    0.25s ease-out both; }
+.scale-in   { animation: scale-in   0.28s ease-out both; }
+
+/* Stagger helper: add stagger-1 stagger-2 etc. */
+.stagger-1 { animation-delay: 0.06s; }
+.stagger-2 { animation-delay: 0.12s; }
+.stagger-3 { animation-delay: 0.18s; }
+.stagger-4 { animation-delay: 0.24s; }
+
+/* ================================================================== */
+/* Skeleton shimmer                                                     */
+/* ================================================================== */
 
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
@@ -87,29 +100,49 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(0,0,0,0.05) 25%,
-    rgba(0,0,0,0.10) 50%,
-    rgba(0,0,0,0.05) 75%
+    rgba(0,0,0,0.04) 25%,
+    rgba(0,0,0,0.09) 50%,
+    rgba(0,0,0,0.04) 75%
   );
   background-size: 800px 100%;
   animation: shimmer 1.6s infinite;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
+/* Card micro-interactions                                              */
+/* ================================================================== */
+
+.card-lift {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 12px rgba(13,38,24,0.06),
+    0 1px 3px  rgba(13,38,24,0.08);
+}
+
+/* ================================================================== */
 /* Base                                                                 */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 
 :root {
   --background: #ede9dc;
   --foreground: #0d2618;
 }
 
-html  { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(13,38,24,0.12);
+  color: #0d2618;
 }

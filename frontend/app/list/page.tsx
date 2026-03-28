@@ -6,10 +6,6 @@ import VoiceRecorder, { ResultCard, VoiceApiResponse, humaniseError } from "../c
 import { API_URL } from "../lib/api";
 import { useLanguage } from "../context/LanguageContext";
 
-/* ------------------------------------------------------------------
-   Types
------------------------------------------------------------------- */
-
 type Tab    = "voice" | "form";
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -26,10 +22,6 @@ const UNITS_BY_CROP: Record<string, string[]> = {
   Rice:     ["bags", "kg", "tonnes"],
 };
 
-/* ------------------------------------------------------------------
-   Component
------------------------------------------------------------------- */
-
 export default function ListPage() {
   const { t, speechLanguage } = useLanguage();
   const [tab,        setTab]        = useState<Tab>("voice");
@@ -44,8 +36,7 @@ export default function ListPage() {
 
   function handleCropChange(c: string) {
     setCrop(c);
-    const units = UNITS_BY_CROP[c] ?? ["kg"];
-    setUnit(units[0]);
+    setUnit((UNITS_BY_CROP[c] ?? ["kg"])[0]);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -79,29 +70,33 @@ export default function ListPage() {
   }
 
   return (
-    <div className="px-4 pt-7 pb-6 max-w-lg mx-auto w-full">
+    <div className="px-4 pt-8 pb-8 max-w-lg mx-auto w-full">
 
-      {/* Page header */}
-      <div className="mb-6">
+      <div className="mb-7 fade-in-up">
         <div className="flex items-center gap-2 mb-1">
-          <PackagePlus className="w-4.5 h-4.5 text-ink-900" strokeWidth={2} />
-          <h2 className="text-xl font-bold text-ink-900">{t("list_title")}</h2>
+          <PackagePlus className="w-[18px] h-[18px] text-ink-900" strokeWidth={2.2} />
+          <h2 className="text-xl font-bold text-ink-900 tracking-tight">{t("list_title")}</h2>
         </div>
-        <p className="text-xs text-ink-500">{t("list_subtitle")}</p>
+        <p className="text-[11px] text-ink-400 mt-0.5">{t("list_subtitle")}</p>
       </div>
 
       {/* Tab switcher */}
-      <div className="flex rounded-xl border border-ink-200 bg-sand-50 p-1 mb-6">
+      <div className="relative flex rounded-xl border border-ink-200/80 bg-sand-50 p-1 mb-6 fade-in-up stagger-1">
+        <span
+          className="absolute top-1 bottom-1 rounded-lg bg-forest-900 shadow transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)]"
+          style={{
+            width: "calc(50% - 4px)",
+            left: tab === "voice" ? "4px" : "calc(50% + 0px)",
+          }}
+        />
         {(["voice", "form"] as Tab[]).map((id) => (
           <button
             key={id}
             onClick={() => setTab(id)}
             className={[
-              "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all duration-200",
+              "relative z-10 flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-colors duration-200",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-900/30",
-              tab === id
-                ? "bg-forest-900 text-sand-50 shadow"
-                : "text-ink-500 hover:text-ink-700",
+              tab === id ? "text-sand-50" : "text-ink-400 hover:text-ink-700",
             ].join(" ")}
           >
             {id === "voice" ? <Mic className="w-3.5 h-3.5" /> : <PackagePlus className="w-3.5 h-3.5" />}
@@ -112,8 +107,8 @@ export default function ListPage() {
 
       {/* Voice tab */}
       {tab === "voice" && (
-        <div className="rounded-2xl border border-ink-100 bg-sage-100 px-5 py-8 flex flex-col items-center">
-          <p className="text-xs text-ink-500 text-center mb-6">
+        <div className="rounded-[22px] border border-ink-100/60 bg-gradient-to-b from-sage-100 to-sage-100/40 px-5 py-8 flex flex-col items-center scale-in">
+          <p className="text-xs text-ink-400 text-center mb-6 font-medium">
             {t("list_voice_hint")}
           </p>
           <VoiceRecorder />
@@ -122,19 +117,19 @@ export default function ListPage() {
 
       {/* Form tab */}
       {tab === "form" && (
-        <div>
+        <div className="scale-in">
           {formStatus === "success" && formResult ? (
-            <div className="rounded-2xl border border-forest-200 bg-forest-100/30 p-5 mb-4 text-center fade-in-up">
-              <CheckCircle2 className="w-8 h-8 text-forest-700 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-ink-900 mb-4">{t("list_success")}</p>
+            <div className="rounded-2xl border border-forest-200/60 bg-forest-100/20 p-5 mb-4 text-center scale-in">
+              <CheckCircle2 className="w-8 h-8 text-forest-600 mx-auto mb-2" />
+              <p className="text-sm font-bold text-ink-900 mb-4">{t("list_success")}</p>
               <ResultCard result={formResult} onReset={resetForm} />
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
 
-              {/* Crop picker */}
+              {/* Crop */}
               <div>
-                <label className="block text-[11px] uppercase tracking-widest font-bold text-ink-500 mb-2">
+                <label className="block text-[10px] uppercase tracking-[0.12em] font-bold text-ink-400 mb-2.5">
                   {t("crop")}
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -144,11 +139,11 @@ export default function ListPage() {
                       type="button"
                       onClick={() => handleCropChange(c)}
                       className={[
-                        "px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150",
+                        "px-3.5 py-1.5 rounded-full text-[11px] font-bold border transition-all duration-150",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-900/30",
                         crop === c
-                          ? "bg-forest-900 text-sand-50 border-forest-900"
-                          : "border-ink-200 bg-sand-50 text-ink-700 hover:border-ink-400",
+                          ? "bg-forest-900 text-sand-50 border-forest-900 shadow-sm"
+                          : "border-ink-200/80 bg-sand-50 text-ink-600 hover:border-ink-400 hover:text-ink-800",
                       ].join(" ")}
                     >
                       {c}
@@ -160,7 +155,7 @@ export default function ListPage() {
               {/* Quantity + Unit */}
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-[11px] uppercase tracking-widest font-bold text-ink-500 mb-2">
+                  <label className="block text-[10px] uppercase tracking-[0.12em] font-bold text-ink-400 mb-2">
                     {t("quantity")}
                   </label>
                   <input
@@ -170,17 +165,17 @@ export default function ListPage() {
                     onChange={(e) => setQuantity(e.target.value)}
                     placeholder="e.g. 50"
                     required
-                    className="w-full rounded-xl border border-ink-200 bg-sand-50 px-4 py-2.5 text-sm text-ink-900 placeholder-ink-300 focus:outline-none focus:ring-2 focus:ring-forest-900/30 focus:border-transparent transition-all"
+                    className="w-full rounded-xl border border-ink-200/80 bg-sand-50 px-4 py-2.5 text-sm text-ink-900 placeholder-ink-300 focus:outline-none focus:ring-2 focus:ring-forest-900/25 focus:border-transparent transition-all"
                   />
                 </div>
                 <div className="w-32">
-                  <label className="block text-[11px] uppercase tracking-widest font-bold text-ink-500 mb-2">
+                  <label className="block text-[10px] uppercase tracking-[0.12em] font-bold text-ink-400 mb-2">
                     {t("unit")}
                   </label>
                   <select
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
-                    className="w-full rounded-xl border border-ink-200 bg-sand-50 px-3 py-2.5 text-sm text-ink-900 focus:outline-none focus:ring-2 focus:ring-forest-900/30 focus:border-transparent transition-all"
+                    className="w-full rounded-xl border border-ink-200/80 bg-sand-50 px-3 py-2.5 text-sm text-ink-900 focus:outline-none focus:ring-2 focus:ring-forest-900/25 focus:border-transparent transition-all"
                   >
                     {(UNITS_BY_CROP[crop] ?? ["kg"]).map((u) => (
                       <option key={u} value={u}>{u}</option>
@@ -191,7 +186,7 @@ export default function ListPage() {
 
               {/* Region */}
               <div>
-                <label className="block text-[11px] uppercase tracking-widest font-bold text-ink-500 mb-2">
+                <label className="block text-[10px] uppercase tracking-[0.12em] font-bold text-ink-400 mb-2.5">
                   {t("region")}
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -201,11 +196,11 @@ export default function ListPage() {
                       type="button"
                       onClick={() => setRegion(r)}
                       className={[
-                        "px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150",
+                        "px-3.5 py-1.5 rounded-full text-[11px] font-bold border transition-all duration-150",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-900/30",
                         region === r
-                          ? "bg-forest-900 text-sand-50 border-forest-900"
-                          : "border-ink-200 bg-sand-50 text-ink-700 hover:border-ink-400",
+                          ? "bg-forest-900 text-sand-50 border-forest-900 shadow-sm"
+                          : "border-ink-200/80 bg-sand-50 text-ink-600 hover:border-ink-400 hover:text-ink-800",
                       ].join(" ")}
                     >
                       {r}
@@ -216,22 +211,21 @@ export default function ListPage() {
 
               {/* Phone */}
               <div>
-                <label className="block text-[11px] uppercase tracking-widest font-bold text-ink-500 mb-2">
+                <label className="block text-[10px] uppercase tracking-[0.12em] font-bold text-ink-400 mb-2">
                   {t("phone")}{" "}
-                  <span className="text-ink-300 normal-case">{t("phone_optional")}</span>
+                  <span className="text-ink-300 normal-case font-semibold">{t("phone_optional")}</span>
                 </label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+233 24 000 0000"
-                  className="w-full rounded-xl border border-ink-200 bg-sand-50 px-4 py-2.5 text-sm text-ink-900 placeholder-ink-300 focus:outline-none focus:ring-2 focus:ring-forest-900/30 focus:border-transparent transition-all"
+                  className="w-full rounded-xl border border-ink-200/80 bg-sand-50 px-4 py-2.5 text-sm text-ink-900 placeholder-ink-300 focus:outline-none focus:ring-2 focus:ring-forest-900/25 focus:border-transparent transition-all"
                 />
               </div>
 
-              {/* Error */}
               {formStatus === "error" && formError && (
-                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200/80 rounded-xl px-4 py-3">
                   {formError}
                 </p>
               )}
@@ -239,7 +233,7 @@ export default function ListPage() {
               <button
                 type="submit"
                 disabled={formStatus === "submitting" || !quantity}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-forest-900 text-sand-50 text-sm font-bold transition-all hover:bg-forest-800 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-900/40 shadow-sm"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-forest-900 text-sand-50 text-sm font-bold transition-all hover:bg-forest-800 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-900/40 shadow-sm"
               >
                 {formStatus === "submitting" ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
